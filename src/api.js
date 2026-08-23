@@ -1,7 +1,9 @@
 const getApiBaseUrl = () => {
   const explicit = import.meta.env.VITE_APP_BACKEND_URL?.trim();
   if (explicit) return explicit.replace(/\/$/, '');
-  return import.meta.env.DEV ? '' : 'https://api.moodi.org';
+  // Same host moodi_app's own ApiConfig.baseUrl defaults to (lib/config/api_config.dart)
+  // — the actual domain app/backend is deployed at, not a guess.
+  return import.meta.env.DEV ? '' : 'https://haven-brain-test.moodi.org';
 };
 
 const API_BASE_URL = getApiBaseUrl();

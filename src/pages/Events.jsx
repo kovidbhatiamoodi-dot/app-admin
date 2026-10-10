@@ -1,5 +1,14 @@
 import { useEffect, useState, useCallback } from 'react';
 import { api } from '../api';
+import EventImageField from '../components/EventImageField';
+import {
+  validateImageFile,
+  validateImageDimensions,
+  compressImage,
+  createPreviewUrl,
+  revokePreviewUrl,
+} from '../lib/image';
+import { uploadToCloudinary } from '../lib/cloudinary';
 
 const CATEGORIES = ['music', 'comedy', 'dance', 'art', 'talk', 'other'];
 const STATUSES = ['booking_open', 'booking_closed', 'housefull', 'completed'];
@@ -12,16 +21,75 @@ const EMPTY_FORM = {
 function CreateEventForm({ onCreated }) {
   const [form, setForm] = useState(EMPTY_FORM);
   const [submitting, setSubmitting] = useState(false);
+  const [submitPhase, setSubmitPhase] = useState('');
   const [error, setError] = useState('');
   const [open, setOpen] = useState(false);
+  const [imageFile, setImageFile] = useState(null);
+  const [imagePreview, setImagePreview] = useState('');
+  const [imageError, setImageError] = useState('');
+
+  // Revoke the previous blob preview whenever it changes or on unmount.
+  useEffect(() => () => revokePreviewUrl(imagePreview), [imagePreview]);
 
   const set = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.value }));
 
+  const handleImageSelect = (file) => {
+    const syncError = validateImageFile(file);
+    if (syncError) {
+      setImageError(syncError);
+      return;
+    }
+    revokePreviewUrl(imagePreview);
+    setImageError('');
+    setImageFile(file);
+    setImagePreview(createPreviewUrl(file));
+  };
+
+  const handleImageRemove = () => {
+    revokePreviewUrl(imagePreview);
+    setImageFile(null);
+    setImagePreview('');
+    setImageError('');
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (submitting) return;
     setError('');
+    setImageError('');
     setSubmitting(true);
     try {
+      // Optional image: validate -> compress -> Cloudinary -> imageUrl.
+      // Any image failure aborts before the event API is called.
+      let imageUrl;
+      if (imageFile) {
+        setSubmitPhase('Validating image…');
+        const dimError = await validateImageDimensions(imageFile);
+        if (dimError) {
+          setImageError(dimError);
+          return;
+        }
+        setSubmitPhase('Compressing image…');
+        let optimized;
+        try {
+          optimized = await compressImage(imageFile);
+        } catch (err) {
+          setImageError(err.message);
+          return;
+        }
+        setSubmitPhase('Uploading image…');
+        try {
+          imageUrl = await uploadToCloudinary(optimized);
+        } catch (err) {
+          setImageError(err.message);
+          return;
+        }
+      }
+      setSubmitPhase('Saving event…');
+      // createEvent() forwards the whole object as JSON, so imageUrl rides
+      // along with the existing payload — no api.js change needed.
+      // NOTE: backend does not persist imageUrl yet (see report); the field
+      // is sent harmlessly until the backend accepts it.
       await api.createEvent({
         name: form.name,
         description: form.description,
@@ -32,14 +100,17 @@ function CreateEventForm({ onCreated }) {
         endTime: new Date(form.endTime).toISOString(),
         capacity: Number(form.capacity),
         geofenceRadius: Number(form.geofenceRadius),
+        ...(imageUrl ? { imageUrl } : {}),
       });
       setForm(EMPTY_FORM);
+      handleImageRemove();
       setOpen(false);
       onCreated();
     } catch (err) {
       setError(err.message);
     } finally {
       setSubmitting(false);
+      setSubmitPhase('');
     }
   };
 
@@ -87,12 +158,20 @@ function CreateEventForm({ onCreated }) {
       <textarea value={form.description} onChange={set('description')} placeholder="Description (optional)" rows={2}
         className="w-full bg-white/[0.06] border border-white/10 text-white placeholder-slate-500 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/60 resize-none" />
 
+      <EventImageField
+        previewUrl={imagePreview}
+        fieldError={imageError}
+        disabled={submitting}
+        onSelect={handleImageSelect}
+        onRemove={handleImageRemove}
+      />
+
       {error && <div className="bg-red-500/10 border border-red-500/30 text-red-400 rounded-xl px-4 py-2.5 text-sm">{error}</div>}
 
       <div className="flex gap-3">
         <button type="button" onClick={() => setOpen(false)} className="px-4 py-2 rounded-xl text-sm text-slate-300 border border-white/10 hover:bg-white/[0.05]">Cancel</button>
         <button type="submit" disabled={submitting} className="px-4 py-2 rounded-xl text-sm font-semibold bg-gradient-to-r from-amber-600 to-orange-600 text-white disabled:opacity-60">
-          {submitting ? 'Creating…' : 'Create Event'}
+          {submitting ? (submitPhase || 'Creating…') : 'Create Event'}
         </button>
       </div>
     </form>
@@ -130,6 +209,16 @@ function EventRow({ event, onChanged }) {
           {event.remaining}/{event.capacity} left
         </span>
       </div>
+
+      {event.imageUrl && (
+        <img
+          src={event.imageUrl}
+          alt={`${event.name} cover`}
+          loading="lazy"
+          className="mb-3 h-32 w-full rounded-xl border border-white/10 object-cover"
+          onError={(e) => { e.currentTarget.style.display = 'none'; }}
+        />
+      )}
 
       <div className="flex flex-wrap gap-2 items-center">
         <select

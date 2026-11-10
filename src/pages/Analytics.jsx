@@ -1,42 +1,16 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api';
 
-const triggerDownload = (blob, filename) => {
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = filename;
-  a.click();
-  URL.revokeObjectURL(url);
-};
-
 export default function Analytics() {
   const [overview, setOverview] = useState(null);
   const [error, setError] = useState('');
-  const [exporting, setExporting] = useState(false);
 
   useEffect(() => {
     api.getAnalyticsOverview().then(setOverview).catch((e) => setError(e.message));
   }, []);
 
-  const handleExport = async () => {
-    setExporting(true);
-    try {
-      const blob = await api.exportUsersCsv();
-      triggerDownload(blob, `festival_users_${new Date().toISOString().split('T')[0]}.csv`);
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setExporting(false);
-    }
-  };
-
   return (
     <div className="space-y-4">
-      <button onClick={handleExport} disabled={exporting} className="px-4 py-2 rounded-xl text-sm font-semibold bg-emerald-600/20 border border-emerald-500/30 text-emerald-300 hover:bg-emerald-600/30 disabled:opacity-50">
-        {exporting ? 'Preparing…' : 'Export Users CSV'}
-      </button>
-
       {error && <div className="bg-red-500/10 border border-red-500/30 text-red-400 rounded-xl px-4 py-3 text-sm">{error}</div>}
 
       {overview === null ? (

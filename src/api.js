@@ -178,10 +178,6 @@ export const api = {
   // Club management itself lives in the CCP admin panel.
   getClubs: () => get('/api/v1/festival-admin/clubs'),
 
-  // Attendee export on the Analytics page: name, email, college and how many
-  // events each person booked. Festival data, not CCP registration reporting.
-  exportUsersCsv: () => downloadBlob('/api/v1/festival-admin/users/export'),
-
   // ── Analytics ─────────────────────────────────────────────────────────────
   getAnalyticsOverview: () => get('/api/v1/festival-admin/analytics/overview'),
   getEventAnalytics: (eventId) => get(`/api/v1/festival-admin/analytics/event/${eventId}`),

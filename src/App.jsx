@@ -8,13 +8,14 @@ import Notifications from './pages/Notifications';
 import Announcements from './pages/Announcements';
 import Places from './pages/Places';
 import Installations from './pages/Installations';
-import Community from './pages/Community';
-import Tasks from './pages/Tasks';
-import Users from './pages/Users';
 import Analytics from './pages/Analytics';
 import AppControl from './pages/AppControl';
 import Sidebar from './components/Sidebar';
 
+// Festival-app operations only. The CCP engagement platform — student
+// registrations, points, tasks, PR representatives and club post moderation —
+// has its own admin at adminsonly.moodi.org and is deliberately not duplicated
+// here.
 const PAGES = {
   dashboard: { title: '📊 Live Dashboard', component: Dashboard },
   events: { title: '🎫 Events', component: Events },
@@ -24,9 +25,6 @@ const PAGES = {
   announcements: { title: '🗞️ Announcements', component: Announcements },
   places: { title: '📍 Places to Visit', component: Places },
   installations: { title: '🗺️ Installations', component: Installations },
-  community: { title: '💬 Community', component: Community },
-  tasks: { title: '✅ Tasks & PR', component: Tasks },
-  users: { title: '🎓 Students', component: Users },
   analytics: { title: '📈 Analytics', component: Analytics },
   appcontrol: { title: '⚙️ App Control', component: AppControl },
 };

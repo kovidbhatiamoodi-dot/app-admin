@@ -121,7 +121,6 @@ export const api = {
   // ── Dashboard / live event stats ─────────────────────────────────────────
   getDashboard: () => get('/api/v1/coordinator/dashboard'),
   getEventLive: (eventId) => get(`/api/v1/coordinator/event/${eventId}/live`),
-  getStats: () => get('/api/v1/admin/stats'),
 
   // ── Events ────────────────────────────────────────────────────────────────
   // Public list (what the app itself sees) and the richer admin table.
@@ -175,43 +174,13 @@ export const api = {
   updateAnnouncement: (id, updates) =>
     patch(`/api/v1/festival-admin/announcements/${id}`, updates),
   deleteAnnouncement: (id) => del(`/api/v1/festival-admin/announcements/${id}`),
-
-  // ── Clubs ─────────────────────────────────────────────────────────────────
+  // Read-only: the announcement form needs the club list to target one.
+  // Club management itself lives in the CCP admin panel.
   getClubs: () => get('/api/v1/festival-admin/clubs'),
-  createClub: (payload) => post('/api/v1/festival-admin/clubs', payload),
-  updateClub: (id, updates) => patch(`/api/v1/festival-admin/clubs/${id}`, updates),
-  deleteClub: (id, { force = false } = {}) =>
-    del(`/api/v1/festival-admin/clubs/${id}${qs({ force: force || undefined })}`),
 
-  // ── Users ─────────────────────────────────────────────────────────────────
-  getUsers: (filters) => get(`/api/v1/festival-admin/users${qs(filters)}`),
-  getUser: (userId) => get(`/api/v1/festival-admin/users/${userId}`),
-  updateUserRole: (userId, role) =>
-    patch(`/api/v1/festival-admin/users/${userId}/role`, { role }),
-  deleteUser: (userId) => del(`/api/v1/festival-admin/users/${userId}`),
-  // Points live on the CCP admin router (same token).
-  updateUserPoints: (userId, payload) => patch(`/api/v1/admin/users/${userId}/points`, payload),
-  getUserPointsLog: (userId) => get(`/api/v1/admin/users/${userId}/points-log`),
+  // Attendee export on the Analytics page: name, email, college and how many
+  // events each person booked. Festival data, not CCP registration reporting.
   exportUsersCsv: () => downloadBlob('/api/v1/festival-admin/users/export'),
-
-  // ── Community moderation (CCP admin router, same token) ──────────────────
-  getThreads: (filters) => get(`/api/v1/admin/threads${qs(filters)}`),
-  getPendingThreads: (filters) => get(`/api/v1/admin/threads/pending${qs(filters)}`),
-  updateThreadStatus: (id, status) => patch(`/api/v1/admin/threads/${id}/status`, { status }),
-
-  // ── Tasks + submissions (CCP admin router, same token) ───────────────────
-  getTasks: () => get('/api/v1/admin/tasks'),
-  getTaskGenres: () => get('/api/v1/admin/tasks/genres'),
-  createTask: (payload) => post('/api/v1/admin/tasks', payload),
-  updateTask: (id, updates) => patch(`/api/v1/admin/tasks/${id}`, updates),
-  deleteTask: (id) => del(`/api/v1/admin/tasks/${id}`),
-  getTaskSubmissions: (filters) => get(`/api/v1/admin/task-submissions${qs(filters)}`),
-  updateTaskSubmissionStatus: (id, status) =>
-    patch(`/api/v1/admin/task-submissions/${id}/status`, { status }),
-
-  // ── PR representative queue ──────────────────────────────────────────────
-  getPrCandidates: (filters) => get(`/api/v1/admin/pr-candidates${qs(filters)}`),
-  updatePrStatus: (id, status) => patch(`/api/v1/admin/pr-candidates/${id}/status`, { status }),
 
   // ── Analytics ─────────────────────────────────────────────────────────────
   getAnalyticsOverview: () => get('/api/v1/festival-admin/analytics/overview'),

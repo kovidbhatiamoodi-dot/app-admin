@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { api } from '../api';
+import { Stat } from '../components/ui';
 
 const STATUS_STYLES = {
   upcoming: 'bg-slate-500/15 text-slate-300 border-slate-500/30',
@@ -20,6 +21,7 @@ function StatChip({ label, value }) {
 
 export default function Dashboard() {
   const [events, setEvents] = useState(null);
+  const [stats, setStats] = useState(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
 
@@ -28,6 +30,9 @@ export default function Dashboard() {
       .then(setEvents)
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
+    // Sign-up and moderation counts alongside the live event stats — a failure
+    // here must not blank the ops screen, so it is deliberately swallowed.
+    api.getStats().then(setStats).catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -38,12 +43,34 @@ export default function Dashboard() {
     return () => clearInterval(interval);
   }, [load]);
 
+  const statsRow = stats && (
+    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 mb-6">
+      <Stat label="Students registered" value={stats.totalUsers} />
+      <Stat label="Signed up today" value={stats.registrationsLast24h} />
+      <Stat
+        label="Posts awaiting review"
+        value={stats.threads?.pending ?? 0}
+        tone={stats.threads?.pending ? 'warn' : 'neutral'}
+      />
+      <Stat label="Signed up this week" value={stats.recentRegistrations} />
+    </div>
+  );
+
   if (loading) return <p className="text-slate-500 text-sm">Loading dashboard…</p>;
   if (error) return <div className="bg-red-500/10 border border-red-500/30 text-red-400 rounded-xl px-4 py-3 text-sm">{error}</div>;
-  if (!events?.length) return <p className="text-slate-500 text-sm">No events yet — create one from the Events tab.</p>;
+  if (!events?.length) {
+    return (
+      <div>
+        {statsRow}
+        <p className="text-slate-500 text-sm">No events yet — create one from the Events tab.</p>
+      </div>
+    );
+  }
 
   return (
-    <div className="grid gap-4 lg:grid-cols-2">
+    <div>
+      {statsRow}
+      <div className="grid gap-4 lg:grid-cols-2">
       {events.map((ev) => (
         <div key={ev.eventId} className="bg-[#111118] border border-white/[0.07] rounded-2xl p-5">
           <div className="flex items-start justify-between gap-3 mb-4">
@@ -65,6 +92,7 @@ export default function Dashboard() {
           </div>
         </div>
       ))}
+      </div>
     </div>
   );
 }

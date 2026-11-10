@@ -1,12 +1,24 @@
+// The host moodi_app's own ApiConfig.baseUrl points at
+// (moodi_app/lib/config/api_config.dart) — the panel must use the same backend
+// as the app, or it would be editing a database the app never reads.
+const DEFAULT_BACKEND_URL = 'https://appbackend26.moodi.org';
+
 const getApiBaseUrl = () => {
   const explicit = import.meta.env.VITE_APP_BACKEND_URL?.trim();
   if (explicit) return explicit.replace(/\/$/, '');
-  // Same host moodi_app's own ApiConfig.baseUrl defaults to (lib/config/api_config.dart)
-  // — the actual domain app/backend is deployed at, not a guess.
-  return import.meta.env.DEV ? '' : 'https://haven-brain-test.moodi.org';
+  // An env file that deliberately sets an EMPTY url means "use the dev proxy"
+  // (vite.config.js forwards /api to a backend on localhost:5058).
+  return import.meta.env.DEV ? '' : DEFAULT_BACKEND_URL;
 };
 
 const API_BASE_URL = getApiBaseUrl();
+
+// Names the host that actually failed, so a dead backend doesn't look like a
+// login problem — which is exactly how the old "port 5058" wording read when
+// the panel was pointed at a remote host.
+const UNREACHABLE = `Cannot reach the backend at ${
+  API_BASE_URL || 'the dev proxy (localhost:5058)'
+} — check that it is running.`;
 
 const getToken = () => localStorage.getItem('app_admin_token');
 
@@ -29,7 +41,7 @@ const handleResponse = async (res) => {
   if (!contentType.includes('application/json')) {
     throw new Error(
       res.status === 0
-        ? 'Cannot reach the backend — make sure it is running on port 5058'
+        ? UNREACHABLE
         : `Server returned ${res.status} (${res.statusText || 'non-JSON response'})`
     );
   }
@@ -50,7 +62,7 @@ const safeFetch = async (url, options) => {
   try {
     res = await fetch(url, options);
   } catch {
-    throw new Error('Cannot reach the backend — make sure it is running on port 5058');
+    throw new Error(UNREACHABLE);
   }
   return handleResponse(res);
 };

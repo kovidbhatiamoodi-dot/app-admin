@@ -100,6 +100,21 @@ const put = (path, body) =>
 const del = (path) =>
   safeFetch(`${API_BASE_URL}${path}`, { method: 'DELETE', headers: headers() });
 
+// Multipart upload: the browser must set its own multipart boundary, so this
+// deliberately does not go through headers() (which pins application/json).
+const postFile = (path, file, fields = {}) => {
+  const body = new FormData();
+  body.append('image', file);
+  for (const [key, value] of Object.entries(fields)) body.append(key, value);
+
+  const token = getToken();
+  return safeFetch(`${API_BASE_URL}${path}`, {
+    method: 'POST',
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    body,
+  });
+};
+
 // Shared by the CSV exports, which return a blob rather than JSON.
 const downloadBlob = async (path) => {
   const res = await fetch(`${API_BASE_URL}${path}`, { headers: headers() });
@@ -124,6 +139,12 @@ export const api = {
 
   // ── Events ────────────────────────────────────────────────────────────────
   // Public list (what the app itself sees) and the richer admin table.
+  // Puts an image on Cloudinary and returns { url, width, height, bytes }.
+  // The backend only stores res.cloudinary.com links, so this is how a file
+  // picked in the panel becomes a usable image URL.
+  uploadImage: (file, folder = 'events') =>
+    postFile('/api/v1/festival-admin/upload-image', file, { folder }),
+
   getEvents: () => get('/api/v1/events'),
   getEventsAdmin: (filters) => get(`/api/v1/festival-admin/events${qs(filters)}`),
   createEvent: (event) => post('/api/v1/coordinator/event', event),

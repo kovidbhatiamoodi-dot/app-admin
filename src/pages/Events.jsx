@@ -59,7 +59,29 @@ const formFromEvent = (event) => ({
 function EventForm({ open, event, onClose, onSaved, onError }) {
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState('');
   const isEdit = Boolean(event);
+
+  // Picking a file uploads it straight away and drops the returned Cloudinary
+  // link into imageUrl — nothing is saved on the event until the form is
+  // submitted, so a wrong pick can just be replaced.
+  const onPickImage = async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+
+    setUploadError('');
+    setUploading(true);
+    try {
+      const { url } = await api.uploadImage(file, 'events');
+      setForm((f) => ({ ...f, imageUrl: url }));
+    } catch (err) {
+      setUploadError(err.message || 'Could not upload that image');
+    } finally {
+      setUploading(false);
+    }
+  };
 
   useEffect(() => {
     if (open) setForm(event ? formFromEvent(event) : emptyForm());
@@ -163,8 +185,45 @@ function EventForm({ open, event, onClose, onSaved, onError }) {
           )}
         </div>
 
-        <Field label="Image URL" hint="Must be an https://res.cloudinary.com link, or leave blank.">
-          <Input value={form.imageUrl} onChange={set('imageUrl')} placeholder="https://res.cloudinary.com/…" />
+        <Field
+          label="Poster"
+          hint={
+            uploadError ||
+            'Pick an image and it is uploaded for you. The link below is what gets saved; paste one directly if you already have it.'
+          }
+        >
+          <div className="flex items-start gap-3">
+            {form.imageUrl ? (
+              <img
+                src={form.imageUrl}
+                alt=""
+                className="h-20 w-20 shrink-0 rounded object-cover"
+              />
+            ) : null}
+            <div className="flex-1 space-y-2">
+              <input
+                type="file"
+                accept="image/*"
+                disabled={uploading}
+                onChange={onPickImage}
+                className="block w-full text-sm file:mr-3 file:rounded file:border-0 file:bg-slate-200 file:px-3 file:py-1.5 file:text-sm hover:file:bg-slate-300"
+              />
+              <Input
+                value={form.imageUrl}
+                onChange={set('imageUrl')}
+                placeholder={uploading ? 'Uploading…' : 'https://res.cloudinary.com/…'}
+              />
+              {form.imageUrl ? (
+                <button
+                  type="button"
+                  className="text-sm text-slate-500 underline"
+                  onClick={() => setForm((f) => ({ ...f, imageUrl: '' }))}
+                >
+                  Remove poster
+                </button>
+              ) : null}
+            </div>
+          </div>
         </Field>
 
         <Field label="Description">

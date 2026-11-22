@@ -110,6 +110,35 @@ function Leaf({ path, value, onChange }) {
     );
   }
 
+  // Arrays of plain strings — the profile field lists, mainly. An empty list
+  // is a real answer ("ask for nothing here"), so clearing the box is allowed
+  // and does not fall back to a default.
+  if (Array.isArray(value) && value.every((item) => typeof item === 'string')) {
+    return (
+      <Field
+        label={label}
+        hint={
+          key === 'requiredForBooking' || key === 'requiredForPoints'
+            ? 'Comma-separated. Allowed: name, phone, college, dob, gender, pincode, city, state, stream, year_of_study, por, instagram. Leave empty to ask for nothing.'
+            : 'Comma-separated. Leave empty for none.'
+        }
+      >
+        <Input
+          value={value.join(', ')}
+          onChange={(next) =>
+            onChange(
+              path,
+              next
+                .split(',')
+                .map((part) => part.trim())
+                .filter(Boolean)
+            )
+          }
+        />
+      </Field>
+    );
+  }
+
   if (typeof value === 'string') {
     const long = value.length > 60 || key === 'message';
     return (
